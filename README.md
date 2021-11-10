@@ -1,27 +1,40 @@
-# NgEventChannel
+# EventChannel for Angular services
 
-This project was generated with [Angular CLI](https://github.com/angular/angular-cli) version 12.1.3.
-
-## Development server
-
-Run `ng serve` for a dev server. Navigate to `http://localhost:4200/`. The app will automatically reload if you change any of the source files.
-
-## Code scaffolding
-
-Run `ng generate component component-name` to generate a new component. You can also use `ng generate directive|pipe|service|class|guard|interface|enum|module`.
+Event channel for communicate Angular services
 
 ## Build
 
-Run `ng build` to build the project. The build artifacts will be stored in the `dist/` directory.
+Run `ng build event-channel` to build the project. The build artifacts will be stored in the `dist/` directory.
 
-## Running unit tests
+## Import
 
-Run `ng test` to execute the unit tests via [Karma](https://karma-runner.github.io).
+```
+import { EventChannel } from 'event-channel';
 
-## Running end-to-end tests
+export const EVENTS = {
+ LOGIN = 'ACCOUNT.LOGIN',
+ LOGOFF = 'ACCOUNT.LOGOFF'
+};
 
-Run `ng e2e` to execute the end-to-end tests via a platform of your choice. To use this command, you need to first add a package that implements end-to-end testing capabilities.
+@NgModule({
+ imports: [
+  EventChannel.forRoot(EVENTS)
+ ]
+})
+```
 
-## Further help
+## Using in services
 
-To get more help on the Angular CLI use `ng help` or go check out the [Angular CLI Overview and Command Reference](https://angular.io/cli) page.
+```
+import { EventChannelService } from 'event-channel';
+import { EVENTS } from './app.module';
+
+@Injectable({
+ providedIn: 'root'
+})
+export class AnyService {
+ constructor(private eventChannel: EventChannelService) {
+  this.eventChannel.on(EVENTS.LOGIN).subscribe(() => /*HANDLE EVENT*/);
+ }
+})
+```
