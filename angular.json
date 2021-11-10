@@ -1,0 +1,42 @@
+{
+  "$schema": "./node_modules/@angular/cli/lib/config/schema.json",
+  "cli": {
+    "analytics": false
+  },
+  "version": 1,
+  "newProjectRoot": "projects",
+  "projects": {
+    "event-channel": {
+      "projectType": "library",
+      "root": "projects/event-channel",
+      "sourceRoot": "projects/event-channel/src",
+      "prefix": "lib",
+      "architect": {
+        "build": {
+          "builder": "@angular-devkit/build-angular:ng-packagr",
+          "options": {
+            "project": "projects/event-channel/ng-package.json"
+          },
+          "configurations": {
+            "production": {
+              "tsConfig": "projects/event-channel/tsconfig.lib.prod.json"
+            },
+            "development": {
+              "tsConfig": "projects/event-channel/tsconfig.lib.json"
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "test": {
+          "builder": "@angular-devkit/build-angular:karma",
+          "options": {
+            "main": "projects/event-channel/src/test.ts",
+            "tsConfig": "projects/event-channel/tsconfig.spec.json",
+            "karmaConfig": "projects/event-channel/karma.conf.js"
+          }
+        }
+      }
+    }
+  },
+  "defaultProject": "event-channel"
+}
