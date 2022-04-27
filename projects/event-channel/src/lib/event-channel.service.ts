@@ -1,23 +1,34 @@
-import {Inject, Injectable, ModuleWithProviders, NgModule} from '@angular/core';
-import {Subject,Observable,of} from 'rxjs';
+import {Inject, Injectable} from '@angular/core';
+import {Subject, Observable, EMPTY} from 'rxjs';
+import {HubConnection, HubConnectionBuilder, IHttpConnectionOptions, LogLevel} from '@microsoft/signalr';
 
 interface ServiceEvent {
   type: string;
   subj: Subject<any>;
 }
 
+export interface EventChannelConfig {
+  listenServerEvents: boolean;
+}
+
+/**
+ * EventChannel для коммуникации сервисов
+ */
 @Injectable({
   providedIn: 'root',
 })
 export class EventChannelService {
-
   private eventBrocker: ServiceEvent[] = [];
+  private connection?: HubConnection;
 
-  constructor(@Inject('EVENTS') private events: {}) {
+  constructor(
+    @Inject('EVENTS') private events: Object,
+    @Inject('config') private config: EventChannelConfig = {listenServerEvents: false},
+  ) {
     this.parseEvents(events);
   }
 
-  on<T>(eventType: string): Observable<T | null> {
+  on<T>(eventType: string): Observable<T> {
     const _event$ = this.eventBrocker.find(event => event.type === eventType);
 
     if (_event$) {
@@ -25,7 +36,7 @@ export class EventChannelService {
     }
 
     console.error(`Подписка на несуществующее событие ${eventType}`);
-    return of(null);
+    return EMPTY;
   }
 
   dispatch<T>(eventType: string, payload?: T): void {
@@ -38,29 +49,38 @@ export class EventChannelService {
     }
   }
 
-  parseEvents(_event: Object | string): void {
+  private parseEvents(_event: Object | string): void {
     if (typeof _event === 'string') {
-      this.eventBrocker.push({type: _event, subj: new Subject()});
+      const subj = new Subject();
+      this.eventBrocker.push({type: _event, subj});
+
+      if (this.config.listenServerEvents) {
+        const on = () => this.connection!.on(_event, v => subj.next(JSON.parse(v)));
+
+        if (!this.connection) {
+          this.startListenServerEvents().then(on);
+        } else {
+          on();
+        }
+      }
+
     } else {
-      // @ts-ignore
       Object.keys(_event).forEach((ev: string) => this.parseEvents(_event[ev]));
     }
   }
 
-}
+  private async startListenServerEvents(): Promise<void> {
+    const options: IHttpConnectionOptions = {transport: 1, logger: LogLevel.None};
+    this.connection = new HubConnectionBuilder().withUrl('/api/signalr-service/ws', options).withAutomaticReconnect().build();
 
-@NgModule()
-export class EventChannel {
-  public static forRoot(events: Object): ModuleWithProviders<EventChannel> {
-    return {
-      ngModule: EventChannel,
-      providers: [
-        EventChannelService,
-        {
-          provide: 'EVENTS',
-          useValue: events,
-        },
-      ],
-    };
+    try {
+      await this.connection.start();
+    } catch {
+      setTimeout(() => this.startListenServerEvents(), 5000);
+    }
+  }
+
+  public stopListenServerEvents(): void {
+    if (this.connection) this.connection.stop().then(() => this.connection = undefined);
   }
 }
